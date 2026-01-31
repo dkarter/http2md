@@ -4,10 +4,29 @@ A CLI tool to fetch web pages and convert them to Markdown using Playwright.
 
 ## Installation
 
+## Installation
 ```bash
 pip install http2md
 http2md install
 ```
+
+### Docker
+
+You can use `http2md` via Docker without installing Python or system dependencies.
+
+1.  **Build the image** (first time only):
+    ```bash
+    docker-compose build
+    ```
+
+2.  **Run the crawler**:
+    ```bash
+    # Crawl and save to ./out_docker/
+    docker-compose run --rm http2md https://example.com --outdir out
+    ```
+
+    *   The `./out_docker` directory on your host is mounted to `/app/out` inside the container.
+    *   Command arguments (`--depth`, `--tqdm`, etc.) are passed directly to `http2md`.
 
 ## Usage
 
