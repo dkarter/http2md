@@ -144,3 +144,9 @@ dmypy.json
 # editors
 .vscode/
 .idea/
+/publish2pypi.sh
+/src/out.md
+/out/
+/out_debug/
+/out_tqdm/
+/debug_crawler.py

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "http2md"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="User", email="user@example.com" },
 ]
@@ -20,6 +20,7 @@ dependencies = [
     "playwright>=1.40.0",
     "markdownify>=0.11.6",
     "beautifulsoup4>=4.12.0",
+    "tqdm>=4.66.0",
 ]
 
 [project.scripts]
