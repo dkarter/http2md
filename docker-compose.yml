@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  http2md:
+    build: .
+    volumes:
+      - ./out_docker:/app/out
+    working_dir: /app
+    # Keep container running if needed, or just run one-off commands
+    # To run a command: docker-compose run --rm http2md https://example.com -o out/example.md

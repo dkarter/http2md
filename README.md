@@ -2,7 +2,6 @@
 
 A CLI tool to fetch web pages and convert them to Markdown using Playwright.
 
-## Installation
 
 ## Installation
 ```bash
@@ -48,6 +47,14 @@ http2md https://slow-site.com --timeout 60000
 
 # Use specific wait strategy
 http2md https://fast-site.com --wait-until load
+
+# SYNC Crawl site to depth 2, save to ./docs/
+http2md https://react.dev  --depth 2 --outdir ./docs
+
+# ASYNC Increase concurrency to 10
+http2md async https://react.dev --jobs 10 --outdir ./docs
+
+
 ```
 
 ## CLI Options
@@ -116,17 +123,41 @@ Crawl entire websites to a specified depth:
 
 ```bash
 # Crawl site to depth 2, save to ./docs/
-http2md https://docs.example.com --depth 2 --outdir ./docs
+http2md https://react.dev  --depth 2 --outdir ./docs
 
 # Only crawl /api/* pages
-http2md https://docs.example.com --depth 3 --include "/api/*"
+http2md https://react.dev  --depth 3 --include "/api/*"
 
 # Exclude images and static files
-http2md https://site.com --depth 2 --exclude "*.png" --exclude "*.css"
+http2md https://react.dev  --depth 2 --exclude "*.png" --exclude "*.css"
 
 # Quiet mode (no progress output)
-http2md https://site.com --depth 1 --outdir ./out -q
+http2md https://react.dev  --depth 1 --outdir ./out -q
 ```
+
+### Parallel Crawling (Fast Mode)
+
+Use the `async` command to enable parallel downloading (up to 5-10x faster):
+
+```bash
+# Run with 5 concurrent jobs (default)
+http2md async https://react.dev  --depth 2 --outdir ./docs
+
+# Increase concurrency to 10
+http2md async https://react.dev --jobs 10 --outdir ./docs
+```
+
+*   **Note**: This mode uses `asyncio` and reuses the browser instance, making it much faster but potentially less stable on extremely complex sites.
+*   **Standard mode** (`http2md <url>`) remains synchronous and uses a fresh browser for every page (slower but maximum isolation/reliability).
+
+### Why use Async Mode?
+
+The async implementation (`crawler_async.py`) is designed for performance:
+
+1.  **Architecture**: Uses `asyncio` and `playwright.async_api`.
+2.  **Resource Efficiency**: Reuses a single `BrowserContext` across multiple pages instead of launching a new browser for every URL.
+3.  **Concurrency**: Uses a worker pool to fetch multiple pages in parallel (controlled by `--jobs`).
+4.  **Speed**: Can be 5-10x faster than the synchronous mode, especially on larger sites.
 
 ### Crawling Options
 
@@ -161,7 +192,7 @@ def on_progress(url, status, current, total, html=None, markdown=None):
         print(f"  Downloaded {len(html)} bytes")
 
 results = crawl_site(
-    "https://docs.example.com",
+    "https://react.dev",
     depth=2,
     outdir="./output",
     callback=on_progress,
@@ -192,5 +223,28 @@ crawl_site(
     callback=tqdm_callback
 )
 pbar.close()
+)
+pbar.close()
+```
+
+### Python API (Async)
+
+For maximum performance in your own scripts, use `crawl_site_async`:
+
+```python
+import asyncio
+from http2md.crawler_async import crawl_site_async
+
+async def main():
+    results = await crawl_site_async(
+        "https://react.dev",
+        depth=2,
+        jobs=10,  # 10 concurrent requests
+        outdir="./output_async"
+    )
+    print(f"Crawled {len(results)} pages")
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 

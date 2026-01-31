@@ -150,3 +150,5 @@ dmypy.json
 /out_debug/
 /out_tqdm/
 /debug_crawler.py
+/out_docker/
+/out_async/

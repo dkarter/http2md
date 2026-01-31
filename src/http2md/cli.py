@@ -4,7 +4,9 @@ import subprocess
 
 from http2md.crawler import fetch_html
 from http2md.crawler_site import crawl_site
+from http2md.crawler_async import crawl_site_async
 from markdownify import markdownify as md
+import asyncio
 
 try:
     from tqdm import tqdm
@@ -18,7 +20,73 @@ def progress_callback(url: str, status: str, current: int, total: int, html: Opt
     print(f"[{current}/{total}] {status}: {url}", file=sys.stderr, flush=True)
 
 
+def async_main(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Convert HTTP content to Markdown (Async Mode)")
+    parser.add_argument("url", help="URL to crawl")
+    parser.add_argument("--depth", type=int, default=1, help="Crawl depth")
+    parser.add_argument("--outdir", type=str, default=".", help="Output directory")
+    parser.add_argument("--jobs", "-j", type=int, default=5, help="Number of concurrent jobs")
+    parser.add_argument("--include", type=str, action="append", default=[], help="Include patterns")
+    parser.add_argument("--exclude", type=str, action="append", default=[], help="Exclude patterns")
+    parser.add_argument("--no-same-domain", action="store_true", help="Allow following links to other domains")
+    parser.add_argument("--html", action="store_true", help="Output raw HTML")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument("--tqdm", action="store_true", help="Use tqdm progress bar")
+    
+    args = parser.parse_args(argv)
+    
+    # Setup callback
+    callback = progress_callback
+    pbar = None
+    
+    if args.quiet:
+        callback = None
+    elif args.tqdm:
+        if not TQDM_AVAILABLE:
+            print("Error: tqdm not installed", file=sys.stderr)
+            sys.exit(1)
+        pbar = tqdm(unit="pages")
+        def tqdm_callback(url: str, status: str, current: int, total: int, html: Optional[str] = None, markdown: Optional[str] = None) -> None:
+            pbar.total = total
+            if status == "fetching":
+                pbar.set_description(f"Fetching {url[:50]}")
+            elif status == "done" or status.startswith("skipped") or status.startswith("error"):
+                pbar.update(1)
+            pbar.refresh()
+        callback = tqdm_callback
+
+    try:
+        results = asyncio.run(crawl_site_async(
+            args.url,
+            depth=args.depth,
+            outdir=args.outdir,
+            jobs=args.jobs,
+            callback=callback,
+            include=args.include,
+            exclude=args.exclude,
+            same_domain=not args.no_same_domain,
+            output_html=args.html
+        ))
+        
+        if pbar:
+            pbar.close()
+            
+        success = sum(1 for r in results if r["status"] == "success")
+        print(f"\nAsync crawled {success}/{len(results)} pages to {args.outdir}")
+        
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
+    # Dispatch to async mode if first arg is 'async'
+    if len(sys.argv) > 1 and sys.argv[1] == "async":
+        async_main(sys.argv[2:])
+        return
+
     parser = argparse.ArgumentParser(description="Convert HTTP content to Markdown")
     parser.add_argument("url", nargs="?", help="URL to process")
     
